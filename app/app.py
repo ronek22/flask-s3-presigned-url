@@ -25,6 +25,10 @@ def create_app():
     class FileForm(FlaskForm):
         file = FileField("File")
 
+    @app.get("/s3/health")
+    def health():
+        return {"health": "ok"}, 200
+
 
     @app.get("/s3")
     def index():
