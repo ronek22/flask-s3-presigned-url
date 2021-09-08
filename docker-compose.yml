@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  web: 
+    build:
+      context: ./app
+    expose:
+      - 5000
+    env_file:
+      - ./.env
+
+  nginx:
+    build: ./nginx
+    ports:
+      - 80:80
+    depends_on: 
+      - web
