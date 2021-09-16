@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.ERROR,
 
 logger = logging.getLogger()
 
-
+# Outside aws
 def create_app():
     logger.info(f'Starting app in {config.APP_ENV} environment')
     app = Flask(__name__)
