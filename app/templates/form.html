@@ -122,6 +122,7 @@ $("#upload_form").submit(function(event) {
             formData.append("x-amz-credential", result["fields"]["x-amz-credential"]);
             formData.append("x-amz-date", result["fields"]["x-amz-date"]);
             formData.append("x-amz-signature", result["fields"]["x-amz-signature"]);
+            formData.append("x-amz-security-token", result["fields"]["x-amz-security-token"]);
             formData.append("file", $("#file").get()[0].files[0]);
 
             $.ajax({url : result["url"],
