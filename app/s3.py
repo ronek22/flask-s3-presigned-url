@@ -5,24 +5,16 @@ from botocore.exceptions import ClientError
 
 
 class AwsS3UploadClass:
-    def __init__(self, id_key, secret_key, bucket_name):
+    def __init__(self, bucket_name):
         """
         AWS S3 Upload Class
-
-        Arguments:
-            * id_key (string) aws access key id
-            * secret_key (string) aws secret access key
             * bucket (string) the S3 Bucket to connect to
         Attributes:
             * bucket (S3.Bucket) the bucket instance for the specified `bucket_name`
         """
 
-        self.id_key = id_key
-        self.secret_key = secret_key
         self.bucket_name = bucket_name
-
-        self.client = boto3.client('s3', endpoint_url=None, aws_access_key_id=self.id_key,
-                                   aws_secret_access_key=self.secret_key, region_name='eu-central-1', config=Config(signature_version='s3v4'))
+        self.client = boto3.client('s3', endpoint_url=None, region_name='eu-central-1', config=Config(signature_version='s3v4'))
 
     def get_bucket(self, bucket_name):
         try:

@@ -27,8 +27,6 @@ def create_app():
 
     def get_s3_objects():
         session = boto3.Session(
-            aws_access_key_id=config.AWS_ID_KEY,
-            aws_secret_access_key=config.AWS_SECRET_KEY,
             region_name='eu-central-1'
         )
         s3 = session.resource('s3')
@@ -59,7 +57,7 @@ def create_app():
     @app.get("/s3/presigned_url")
     def upload_url():
         filename = sanitize_filename(request.args.get('upload_file'))
-        s3 = AwsS3UploadClass(config.AWS_ID_KEY, config.AWS_SECRET_KEY, config.AWS_S3_BUCKET)
+        s3 = AwsS3UploadClass(config.AWS_S3_BUCKET)
         upload_data = s3.create_presigned_post(filename)
         return jsonify(upload_data)
 
