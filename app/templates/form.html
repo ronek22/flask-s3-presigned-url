@@ -117,9 +117,11 @@ $("#upload_form").submit(function(event) {
 
             let formData = new FormData();
             formData.append("key", result["fields"]["key"]);
-            formData.append("AWSAccessKeyId", result["fields"]["AWSAccessKeyId"]);
             formData.append("policy", result["fields"]["policy"]);
-            formData.append("signature", result["fields"]["signature"]);
+            formData.append("x-amz-algorithm", result["fields"]["x-amz-algorithm"]);
+            formData.append("x-amz-credential", result["fields"]["x-amz-credential"]);
+            formData.append("x-amz-date", result["fields"]["x-amz-date"]);
+            formData.append("x-amz-signature", result["fields"]["x-amz-signature"]);
             formData.append("file", $("#file").get()[0].files[0]);
 
             $.ajax({url : result["url"],
@@ -129,7 +131,7 @@ $("#upload_form").submit(function(event) {
                     contentType: false,
                     processData: false,
                     success : function(result) {
-                        alert("File uploaded");
+                      location.reload();
                     },
                     error: function(error) {
                         alert("Upload failed :(");

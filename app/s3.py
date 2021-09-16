@@ -1,5 +1,6 @@
 import logging
 import boto3
+from botocore.client import Config
 from botocore.exceptions import ClientError
 
 
@@ -21,7 +22,7 @@ class AwsS3UploadClass:
         self.bucket_name = bucket_name
 
         self.client = boto3.client('s3', endpoint_url=None, aws_access_key_id=self.id_key,
-                                   aws_secret_access_key=self.secret_key, region_name='eu-central-1')
+                                   aws_secret_access_key=self.secret_key, region_name='eu-central-1', config=Config(signature_version='s3v4'))
 
     def get_bucket(self, bucket_name):
         try:
