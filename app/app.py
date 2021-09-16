@@ -1,3 +1,4 @@
+from werkzeug.utils import secure_filename
 import config
 from s3 import AwsS3UploadClass
 from flask_wtf import FlaskForm
@@ -24,9 +25,6 @@ def create_app():
     app.config.from_object('config')
     
 
-    class FileForm(FlaskForm):
-        file = FileField("File")
-
     def get_s3_objects():
         session = boto3.Session(
             aws_access_key_id=config.AWS_ID_KEY,
@@ -40,6 +38,13 @@ def create_app():
         bucket_with_urls = [(obj, s3_client.generate_presigned_url('get_object', Params={'Bucket': config.AWS_S3_BUCKET, 'Key': obj.key}, ExpiresIn=60)) for obj in bucket_list]
         return bucket_with_urls
 
+    def sanitize_filename(filename: str):
+        for sep in ('/', '\\'):
+            if sep in filename:
+                filename = filename.split(sep)[-1]
+        filename = secure_filename(filename)
+        return filename
+
     @app.get("/s3/health")
     def health():
         return {"health": "ok"}, 200
@@ -47,36 +52,17 @@ def create_app():
 
     @app.get("/s3")
     def index():
-        form = FileForm()
         object_list = get_s3_objects()
-        return render_template("form.html", form=form, object_list=object_list, bucket=config.AWS_S3_BUCKET)
 
-    @app.post('/s3')
-    def upload_file():
-        form = FileForm()
-        file = None
-        if "file" in request.files:
-            file = request.files['file']
-        else:
-            return jsonify(error="requires file")
+        return render_template("form.html", object_list=object_list, bucket=config.AWS_S3_BUCKET)
 
+    @app.get("/s3/presigned_url")
+    def upload_url():
+        filename = sanitize_filename(request.args.get('upload_file'))
         s3 = AwsS3UploadClass(config.AWS_ID_KEY, config.AWS_SECRET_KEY, config.AWS_S3_BUCKET)
-        key = f"{str(uuid4())}_{file.filename}"
-        file.save(key)
-        response = s3.create_presigned_post(key)
-        if response is None:
-            flash('Cannot create presigned post url', 'error')
-            return render_template('form.html', form=form)
+        upload_data = s3.create_presigned_post(filename)
+        return jsonify(upload_data)
 
-        files = [('file', open(key, 'rb'))]
-        upload_response = requests.post(response['url'], data=response['fields'], files=files)
-        os.remove(key)
-
-        if upload_response.status_code == 204:
-            flash(f'Succesfully uploaded file: {key}', 'success')
-        else:
-            flash('Error: file was not uploaded', 'error')
-        return redirect(url_for('index'))
     
     return app
 
