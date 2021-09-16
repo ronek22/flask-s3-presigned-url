@@ -12,49 +12,55 @@
   </head>
   <body>
     <div class="container mt-5">
-        {% with messages = get_flashed_messages(with_categories=true) %} {% if
-        messages %}
-        <div class="messages">
-          {% for category, message in messages %}
-          <div
-            class="
-              notification
-              {%
-              if
-              category
-              ==
-              'error'
-              %}is-danger{%
-              elif
-              category
-              ==
-              'success'
-              %}is-success{%
-              endif
-              %}
-            "
-          >
-            <button class="delete"></button>
-            {{message}}
-          </div>
-          {% endfor %}
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %}
+      <div class="messages">
+        {% for category, message in messages %}
+        <div
+          class="
+            notification
+            {%
+            if
+            category
+            ==
+            'error'
+            %}is-danger{%
+            elif
+            category
+            ==
+            'success'
+            %}is-success{%
+            endif
+            %}
+          "
+        >
+          <button class="delete"></button>
+          {{message}}
         </div>
-        {% endif %} {% endwith %} {% block content %} {% endblock content %}
+        {% endfor %}
+      </div>
+      {% endif %} {% endwith %} {% block content %} {% endblock content %}
     </div>
   </body>
 
+  <script
+    src="https://code.jquery.com/jquery-3.2.1.min.js"
+    integrity="sha384-xBuQ/xzmlsLoJpyjoggmTEz8OWUFM0/RC5BsqQBDX2v5cMvDHcMakNTNrHIW2I5f"
+    crossorigin="anonymous"
+  ></script>
+
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      (document.querySelectorAll('.notification .delete') || []).forEach(($delete) => {
-        const $notification = $delete.parentNode;
+    document.addEventListener("DOMContentLoaded", () => {
+      (document.querySelectorAll(".notification .delete") || []).forEach(
+        ($delete) => {
+          const $notification = $delete.parentNode;
 
-        $delete.addEventListener('click', () => {
-          $notification.parentNode.removeChild($notification);
-        });
-      });
+          $delete.addEventListener("click", () => {
+            $notification.parentNode.removeChild($notification);
+          });
+        }
+      );
     });
-
-        {% block scripts %}
-        {% endblock %}
   </script>
+  {% block scripts %} {% endblock %}
 </html>

@@ -6,11 +6,10 @@
       Select file and upload to S3
     </h2>
 
-    <form method="POST" action='/s3' enctype="multipart/form-data" class="container box">
-      {{ form.hidden_tag() }}
+    <form id="upload_form" enctype="multipart/form-data" class="container box">
       <div class="file has-name is-boxed is-fullwidth has-text-centered">
         <label class="file-label">
-          <input class="file-input" type="file" name="file" required/>
+          <input class="file-input" type="file" name="file" id="file" required/>
           <span class="file-cta">
             <span class="file-icon">
               <i class="fas fa-upload"></i>
@@ -71,6 +70,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Display file name when select file
     let fileInputs = document.querySelectorAll('.file.has-name')
@@ -99,4 +99,50 @@ document.addEventListener('DOMContentLoaded', () => {
       })
     }
   })
+</script>
+
+<script>
+$("#upload_form").submit(function(event) {
+  event.preventDefault();
+
+
+  $.ajax({url: "/s3/presigned_url",
+          type: "GET",
+          crossDomain: true,
+          cache: false,
+          data: {
+            upload_file: $("#file").val(),
+          },
+          success: function(result) {
+
+            let formData = new FormData();
+            formData.append("key", result["fields"]["key"]);
+            formData.append("AWSAccessKeyId", result["fields"]["AWSAccessKeyId"]);
+            formData.append("policy", result["fields"]["policy"]);
+            formData.append("signature", result["fields"]["signature"]);
+            formData.append("file", $("#file").get()[0].files[0]);
+
+            $.ajax({url : result["url"],
+                    type : "POST",
+                    data : formData,
+                    cache: false,
+                    contentType: false,
+                    processData: false,
+                    success : function(result) {
+                        alert("File uploaded");
+                    },
+                    error: function(error) {
+                        alert("Upload failed :(");
+                    }
+            });
+
+
+          },
+          error: function(error) {
+            alert("cannot start uploading :( try again later");
+          }
+
+});
+});
+</script>
 {% endblock %}
