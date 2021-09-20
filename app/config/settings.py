@@ -7,6 +7,7 @@ class BaseConfig():
     TESTING = False
     DEBUG = False
     SECRET_KEY = urandom(32)
+    DB_APP_URL = 'localhost'
 
 class DevConfig(BaseConfig):
     FLASK_ENV = 'development'
