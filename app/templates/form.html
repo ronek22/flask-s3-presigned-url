@@ -1,151 +1,196 @@
-{% extends 'base.html' %} {% block content %}
-<section class="hero is-danger box">
-  <div class="hero-body">
-    <h1 class="title">S3 Upload Form</h1>
-    <h2 class="subtitle">
-      Select file and upload to S3
-    </h2>
+{% extends 'base.html' %} 
+{% block style %}
+<style>
+  .upload {
+    height: 100%;
+  }
 
-    <form id="upload_form" enctype="multipart/form-data" class="container box">
-      <div class="file has-name is-boxed is-fullwidth has-text-centered">
-        <label class="file-label">
-          <input class="file-input" type="file" name="file" id="file" required/>
-          <span class="file-cta">
-            <span class="file-icon">
-              <i class="fas fa-upload"></i>
-            </span>
-            <span class="file-label"> Choose a file… </span>
-          </span>
-          <span class="file-name">No file selected</span>
-        </label>
-      </div>
+  .level {
+    flex-direction: column;
+  }
+</style>
+{% endblock style %}
+
+{% block content %}
+
+<div class="columns">
+  <div class="column">
+    <section class="upload hero is-danger box">
+      <div class="hero-body">
+        <h1 class="title">S3 Upload Form</h1>
+        <h2 class="subtitle">Select file and upload to S3</h2>
     
-      <div class="field mt-5">
-        <button type="submit" class="button is-success is-fullwidth">Upload</button>
+        <form id="upload_form" enctype="multipart/form-data" class="container box">
+          <div class="file has-name is-boxed is-fullwidth has-text-centered">
+            <label class="file-label">
+              <input
+                class="file-input"
+                type="file"
+                name="file"
+                id="file"
+                required
+              />
+              <span class="file-cta">
+                <span class="file-icon">
+                  <i class="fas fa-upload"></i>
+                </span>
+                <span class="file-label"> Choose a file… </span>
+              </span>
+              <span class="file-name">No file selected</span>
+            </label>
+          </div>
+    
+          <div class="field mt-5">
+            <button type="submit" class="button is-success is-fullwidth">
+              Upload
+            </button>
+          </div>
+        </form>
       </div>
-    </form>
+    </section>
   </div>
+  <div class="column">
+    <section class="upload hero is-primary box">
+      <div class="hero-body">
+        <h1 class="title">DB APP Status</h1>
+        <h1 class="subtitle">Status of CRUD application</h1>
 
-</section>
+
+        {% if db.status == 200 %}
+        <div class="level box">
+          <div class="mt-5 level-item has-text-centered">
+          <div>
+            <p class="heading">Activities</p>
+            <p class="title has-text-primary">{{db.activities.count}}</p>
+          </div>
+        </div>
+        <div class="mt-5 mb-5 level-item has-text-centered">
+          <div>
+            <p class="heading">Total distance [km]</p>
+            <p class="title has-text-primary">{{db.activities.total_distance}}</p>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="box p-6 has-text-centered ">
+        <h1 class="subtitle has-text-danger">Cannot fetch data from DB APP</h1>
+      </div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+
 <section class="hero is-info box">
   <div class="hero-body">
     <h1 class="title">S3 Objects</h1>
-    <h2 class="subtitle">
-      List all object in {{ bucket }}
-    </h2>
+    <h2 class="subtitle">List all object in {{ bucket }}</h2>
     <div class="box mt-5">
-      
-    <table class="table is-fullwidth">
-      <thead>
-        <tr>
-          <th>Key</th>
-          <th>Storage Class</th>
-          <th>Last Modified</th>
-          <th>Size</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for object, url in object_list %}
+      <table class="table is-fullwidth">
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Storage Class</th>
+            <th>Last Modified</th>
+            <th>Size</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for object, url in object_list %}
           <tr>
             <td><a href="{{url}}">{{object.key}}</a></td>
             <td>{{object.storage_class}}</td>
             <td>{{object.last_modified}}</td>
             <td>{{'%0.2f'|format(object.size / 1000)}} kB</td>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
-
-  </div>
-
-
-
 </section>
 
-</div>
 
 
-
-{% endblock %}
-
-{% block scripts %}
+{% endblock %} {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener("DOMContentLoaded", () => {
     // 1. Display file name when select file
-    let fileInputs = document.querySelectorAll('.file.has-name')
+    let fileInputs = document.querySelectorAll(".file.has-name");
     for (let fileInput of fileInputs) {
-      let input = fileInput.querySelector('.file-input')
-      let name = fileInput.querySelector('.file-name')
-      input.addEventListener('change', () => {
-        let files = input.files
+      let input = fileInput.querySelector(".file-input");
+      let name = fileInput.querySelector(".file-name");
+      input.addEventListener("change", () => {
+        let files = input.files;
         if (files.length === 0) {
-          name.innerText = 'No file selected'
+          name.innerText = "No file selected";
         } else {
-          name.innerText = files[0].name
+          name.innerText = files[0].name;
         }
-      })
+      });
     }
-  
+
     // 2. Remove file name when form reset
-    let forms = document.getElementsByTagName('form')
+    let forms = document.getElementsByTagName("form");
     for (let form of forms) {
-      form.addEventListener('reset', () => {
-        console.log('a')
-        let names = form.querySelectorAll('.file-name')
+      form.addEventListener("reset", () => {
+        console.log("a");
+        let names = form.querySelectorAll(".file-name");
         for (let name of names) {
-          name.innerText = 'No file selected'
+          name.innerText = "No file selected";
         }
-      })
+      });
     }
-  })
+  });
 </script>
 
 <script>
-$("#upload_form").submit(function(event) {
-  event.preventDefault();
+  $("#upload_form").submit(function (event) {
+    event.preventDefault();
 
+    $.ajax({
+      url: "/s3/presigned_url",
+      type: "GET",
+      crossDomain: true,
+      cache: false,
+      data: {
+        upload_file: $("#file").val(),
+      },
+      success: function (result) {
+        let formData = new FormData();
+        formData.append("key", result["fields"]["key"]);
+        formData.append("policy", result["fields"]["policy"]);
+        formData.append("x-amz-algorithm", result["fields"]["x-amz-algorithm"]);
+        formData.append(
+          "x-amz-credential",
+          result["fields"]["x-amz-credential"]
+        );
+        formData.append("x-amz-date", result["fields"]["x-amz-date"]);
+        formData.append("x-amz-signature", result["fields"]["x-amz-signature"]);
+        formData.append(
+          "x-amz-security-token",
+          result["fields"]["x-amz-security-token"]
+        );
+        formData.append("file", $("#file").get()[0].files[0]);
 
-  $.ajax({url: "/s3/presigned_url",
-          type: "GET",
-          crossDomain: true,
+        $.ajax({
+          url: result["url"],
+          type: "POST",
+          data: formData,
           cache: false,
-          data: {
-            upload_file: $("#file").val(),
+          contentType: false,
+          processData: false,
+          success: function (result) {
+            location.reload();
           },
-          success: function(result) {
-
-            let formData = new FormData();
-            formData.append("key", result["fields"]["key"]);
-            formData.append("policy", result["fields"]["policy"]);
-            formData.append("x-amz-algorithm", result["fields"]["x-amz-algorithm"]);
-            formData.append("x-amz-credential", result["fields"]["x-amz-credential"]);
-            formData.append("x-amz-date", result["fields"]["x-amz-date"]);
-            formData.append("x-amz-signature", result["fields"]["x-amz-signature"]);
-            formData.append("x-amz-security-token", result["fields"]["x-amz-security-token"]);
-            formData.append("file", $("#file").get()[0].files[0]);
-
-            $.ajax({url : result["url"],
-                    type : "POST",
-                    data : formData,
-                    cache: false,
-                    contentType: false,
-                    processData: false,
-                    success : function(result) {
-                      location.reload();
-                    },
-                    error: function(error) {
-                        alert("Upload failed :(");
-                    }
-            });
-
-
+          error: function (error) {
+            alert("Upload failed :(");
           },
-          error: function(error) {
-            alert("cannot start uploading :( try again later");
-          }
-
-});
-});
+        });
+      },
+      error: function (error) {
+        alert("cannot start uploading :( try again later");
+      },
+    });
+  });
 </script>
 {% endblock %}

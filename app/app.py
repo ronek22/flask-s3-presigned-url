@@ -43,6 +43,15 @@ def create_app():
         filename = secure_filename(filename)
         return filename
 
+    def fetch_from_db_app() -> dict:
+        try:
+            total = requests.get(f"{config.DB_APP_URL}/db/total")
+            result = total.json()
+        except requests.exceptions.ConnectionError as error:
+            result = {"status": 400}
+        return result
+
+
     @app.get("/s3/health")
     def health():
         return {"health": "ok"}, 200
@@ -51,8 +60,10 @@ def create_app():
     @app.get("/s3")
     def index():
         object_list = get_s3_objects()
+        data_from_db_app = fetch_from_db_app()
+        print(data_from_db_app)
 
-        return render_template("form.html", object_list=object_list, bucket=config.AWS_S3_BUCKET)
+        return render_template("form.html", db=data_from_db_app, object_list=object_list, bucket=config.AWS_S3_BUCKET)
 
     @app.get("/s3/presigned_url")
     def upload_url():
