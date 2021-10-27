@@ -14,7 +14,7 @@ class AwsS3UploadClass:
         """
 
         self.bucket_name = bucket_name
-        self.client = boto3.client('s3', endpoint_url=None, region_name='eu-central-1', config=Config(signature_version='s3v4'))
+        self.client = boto3.client('s3', endpoint_url=None, config=Config(signature_version='s3v4'))
 
     def get_bucket(self, bucket_name):
         try:

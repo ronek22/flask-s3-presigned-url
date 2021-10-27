@@ -26,9 +26,7 @@ def create_app():
     app.config.from_object('config')
 
     def get_s3_objects():
-        session = boto3.Session(
-            region_name='eu-central-1'
-        )
+        session = boto3.Session()
         s3 = session.resource('s3')
         bucket = s3.Bucket(config.AWS_S3_BUCKET)
         bucket_list = bucket.objects.all()
@@ -70,7 +68,8 @@ def create_app():
         object_list = get_s3_objects()
         data_from_db_app = fetch_from_db_app()
 
-        return render_template("form.html", db=data_from_db_app, object_list=object_list, bucket=config.AWS_S3_BUCKET, version=APP_VERSION)
+        return render_template("form.html", db=data_from_db_app, object_list=object_list, bucket=config.AWS_S3_BUCKET,
+                               version=APP_VERSION)
 
     @app.get("/s3/presigned_url")
     def upload_url():
