@@ -1,0 +1,165 @@
+name: Deployment
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [ closed ]
+
+jobs:
+  start-runner:
+    if: github.event.pull_request.merged == true
+    name: Start self-hosted EC2 Runner
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Start EC2 Runner
+        id: start-ec2-runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: start
+          github-token: ${{ secrets.PUSH_TOKEN }}
+          ec2-image-id: ${{ secrets.AMI_ID }}
+          ec2-instance-type: t2.micro
+          subnet-id: ${{ secrets.PRIVATE_SUBNET_ID }}
+          security-group-id: ${{ secrets.SECURITY_GROUP_ID }}
+          iam-role-name: ${{ secrets.IAM_ROLE_NAME }}
+          aws-resource-tags: >
+            [
+              {"Key": "Name", "Value": "ec2-github-runner"},
+              {"Key": "Owner", "Value": "jronkiewicz"}
+            ]
+
+  push-to-ecr:
+
+    name: Push to ECR
+    needs: start-runner
+    runs-on: ${{ needs.start-runner.outputs.label }}
+
+    outputs:
+      tag: ${{ steps.tags.outputs.new_tag }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@1.36.0
+        id: tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: LS DIRECTORIES
+        run: ls -la
+
+      - name: Build, tag, and push APP image to Amazon ECR
+        id: build-app-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_APP_NAME }}
+          IMAGE_TAG: ${{ steps.tags.outputs.new_tag }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f ./app
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Build, tag, and push NGINX image to Amazon ECR
+        id: build-nginx-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_NGINX_NAME }}
+          IMAGE_TAG: ${{ steps.tags.outputs.new_tag }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./nginx
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+  apply-terraform:
+
+    name: Terraform apply
+    needs:
+      - start-runner
+      - push-to-ecr
+    runs-on: ${{ needs.start-runner.outputs.label }}
+    steps:
+      - name: LS BEFORE CHECKOUT
+        run: ls -la
+
+      - name: Checkout terraform repository
+        uses: actions/checkout@v2
+        with:
+          repository: 'ronek22/terraform-aws-ecs-upskill'
+          token: ${{ secrets.PUSH_TOKEN }}
+
+      - name: LS AFTER CHECKOUT
+        run: ls -la
+
+      - name: Update terraform app versions json
+        uses: jossef/action-set-json-field@v1
+        with:
+          file: applications/terraform.tfvars.json
+          field: s3_app_version
+          value: ${{ needs.push-to-ecr.outputs.tag }}
+
+      - name: Commit App Version json
+        run: |
+          git config --system user.name 'github-actions[bot]'
+          git config --system user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -am "Automated app_version update"
+          git push
+
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Terraform init
+        working-directory: ./applications
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: ./applications
+        run: terraform apply -auto-approve
+
+  stop-runner:
+    name: Stop self-hosted EC2 runner
+    needs:
+      - start-runner # required to get output from the start-runner job
+      - apply-terraform # required to wait when the main job is done
+    runs-on: ubuntu-latest
+    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Stop EC2 runner
+        uses: machulav/ec2-github-runner@v2
+        with:
+          mode: stop
+          github-token: ${{ secrets.PUSH_TOKEN }}
+          label: ${{ needs.start-runner.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}
